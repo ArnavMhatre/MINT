@@ -111,7 +111,7 @@ def comfort_model(T_internal_F, RH_internal, T_wall_F):
 
     METABOLIC_RATE = 60  # W/m2, seated quiet, ASHRAE Fundamentals Ch.9 Table 4
 
-    tolerance = 15  # W/m2 either side — needs calibration from your survey data
+    tolerance = 15  # W/m2 either side — needs calibration from survey data
 
     if q_total < METABOLIC_RATE - tolerance:
         verdict = "Hot"
@@ -123,9 +123,30 @@ def comfort_model(T_internal_F, RH_internal, T_wall_F):
     return q_total, verdict
 
 
-def steady_state_model(T_external_F, RH_external, T_setpoint_F, R_wall, A_envelope, ACH, volume):
+def steady_state_model(T_external_F, RH_external, T_setpoint_F,
+                        R_wall=2.29, A_envelope=230, ACH=0.5, volume=400):
     """
-    Takes all 3 steps together
+    T_external_F: external temperature in Fahrenheit
+    RH_external: external relative humidity
+    T_setpoint_F: the thermostate temperature
+
+    Following parameters are assumed, can be changed later
+
+    R_wall=2.29 : unit - m^2K/W, converted from typical R-13 value
+    A_envelope=230 : Area heat-loss can occur from (Walls windows)
+    ACH=0.5 : average air changes per hour
+    volume=400 : interior air volume
     """
+
+    Q_loss = building_heat_loss(T_setpoint_F, T_external_F, R_wall, A_envelope, ACH, volume)
+    RH_internal = indoor_humidity(T_setpoint_F, T_external_F, RH_external)
+    # have to look up
+    # R_film_inner =
+    # R_film_outer = 
+    R_total = R_wall
+    delta_T_F = T_setpoint_F - T_external_F
+    T_wall_inner_F = T_setpoint_F - delta_T_F * (R_film_inner / R_total)
+    q_body, verdict = comfort_model(T_setpoint_F, RH_internal, T_wall_inner_F)
+    return Q_loss, RH_internal, q_body, verdict
 
 # Sweep outdoor conditions to build database
